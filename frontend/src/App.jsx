@@ -15,6 +15,12 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Assessment History states
+  const [history, setHistory] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState('')
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+
   const skills = [
     { name: 'Java', score: java },
     { name: 'Data Structures & Algorithms', score: dsa },
@@ -93,6 +99,12 @@ function App() {
       setSubmitted(true)
       setSimulationHours(hours)
 
+      // A new assessment has been saved.
+      // Refresh history if it was already opened.
+      if (historyLoaded) {
+        loadHistory()
+      }
+
     } catch (err) {
       console.error('Backend error:', err)
       setError(err.message || 'Could not connect to backend.')
@@ -106,6 +118,35 @@ function App() {
     setSubmitted(false)
     setAnalysis(null)
     setError('')
+  }
+
+  // Fetch previous assessments from database
+  async function loadHistory() {
+    setHistoryLoading(true)
+    setHistoryError('')
+
+    try {
+      const response = await fetch('http://localhost:8000/history')
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          result.detail || 'Could not fetch assessment history.'
+        )
+      }
+
+      setHistory(result.history || [])
+      setHistoryLoaded(true)
+
+    } catch (err) {
+      console.error('History error:', err)
+      setHistoryError(
+        err.message || 'Could not connect to backend.'
+      )
+    } finally {
+      setHistoryLoading(false)
+    }
   }
 
   return (
@@ -122,6 +163,7 @@ function App() {
           <a href="#home">Home</a>
           <a href="#careers">Careers</a>
           <a href="#dashboard">Dashboard</a>
+          <a href="#history">History</a>
           <a href="#features">Features</a>
         </div>
       </nav>
@@ -185,7 +227,6 @@ function App() {
               }}
             >
               <h3>{career}</h3>
-
               <p>Explore skills required for this career.</p>
 
               <span>
@@ -281,7 +322,6 @@ function App() {
           <section className="dashboard-section" id="dashboard">
 
             <p className="tag">YOUR PERSONAL DASHBOARD</p>
-
             <h2>Learning Performance Overview</h2>
 
             <p>
@@ -318,7 +358,6 @@ function App() {
 
               {skills.map(skill => (
                 <div className="skill-row" key={skill.name}>
-
                   <div>
                     <strong>{skill.name}</strong>
                     <span>{skill.score}%</span>
@@ -327,7 +366,6 @@ function App() {
                   <div className="progress">
                     <div style={{ width: `${skill.score}%` }} />
                   </div>
-
                 </div>
               ))}
 
@@ -338,9 +376,7 @@ function App() {
           <section className="simulation-section">
 
             <p className="tag">WHAT-IF SIMULATION</p>
-
             <h2>Simulate Your Learning Progress</h2>
-
             <p>What if you change your daily study hours?</p>
 
             <div className="simulation-card">
@@ -366,7 +402,6 @@ function App() {
               </div>
 
               <div className="comparison">
-
                 <div>
                   <p>Current plan</p>
                   <h3>{estimatedDays} days</h3>
@@ -378,7 +413,6 @@ function App() {
                   <h3>{simulatedDays} days</h3>
                   <span>{simulationHours} hours/day</span>
                 </div>
-
               </div>
 
               <p className="small-note">
@@ -394,7 +428,6 @@ function App() {
           <section className="roadmap-section">
 
             <p className="tag">YOUR PERSONALIZED PLAN</p>
-
             <h2>Learning Roadmap</h2>
 
             <p>
@@ -420,7 +453,6 @@ function App() {
 
                     <p>
                       Priority:
-
                       <strong
                         style={{
                           color: item.priority === 'High'
@@ -439,7 +471,6 @@ function App() {
                       {item.topics.map((topic, topicIndex) => (
                         <li key={topicIndex}>
                           {topic.topic}
-
                           <span
                             style={{
                               marginLeft: '8px',
@@ -463,16 +494,13 @@ function App() {
                 </div>
 
                 <div className="roadmap-content">
-
                   <h3>Build Practical Projects</h3>
-
                   <p>
                     Apply your knowledge by building real-world projects.
                   </p>
-
                   <p>Estimated Time: 10 hours</p>
-
                 </div>
+
               </div>
 
             </div>
@@ -482,9 +510,7 @@ function App() {
               style={{ marginTop: '25px' }}
             >
               <h3>Total Learning Hours</h3>
-
               <h2>{totalLearningHours} Hours</h2>
-
               <p>
                 Estimated completion: {estimatedDays} days
               </p>
@@ -496,7 +522,6 @@ function App() {
           <section className="features-section">
 
             <p className="tag">PERSONALIZED GUIDANCE</p>
-
             <h2>Your Recommendations</h2>
 
             <div className="features-grid">
@@ -504,21 +529,155 @@ function App() {
               {analysis.recommendations?.map(
                 (recommendation, index) => (
                   <div className="feature-card" key={index}>
-
                     <h3>Recommendation {index + 1}</h3>
-
                     <p>{recommendation}</p>
-
                   </div>
                 )
               )}
 
             </div>
-
           </section>
 
         </>
       )}
+
+      {/* ASSESSMENT HISTORY */}
+      <section
+        className="features-section"
+        id="history"
+        style={{ paddingTop: '50px', paddingBottom: '50px' }}
+      >
+
+        <p className="tag">YOUR PREVIOUS PERFORMANCE</p>
+
+        <h2>Assessment History</h2>
+
+        <p>
+          View your previous assessments and track your skill progress.
+        </p>
+
+        <button
+          className="main-btn"
+          onClick={loadHistory}
+          disabled={historyLoading}
+          style={{ marginTop: '20px' }}
+        >
+          {historyLoading
+            ? 'Loading History...'
+            : historyLoaded
+              ? 'Refresh Assessment History'
+              : 'View Assessment History'}
+        </button>
+
+        {historyError && (
+          <p style={{ color: 'red', marginTop: '20px' }}>
+            {historyError}
+          </p>
+        )}
+
+        {historyLoaded && (
+          <div style={{ marginTop: '30px' }}>
+
+            <h3>
+              Total Assessments: {history.length}
+            </h3>
+
+            {history.length === 0 ? (
+              <p style={{ marginTop: '20px' }}>
+                No previous assessments found. Generate your first assessment!
+              </p>
+            ) : (
+
+              <div className="features-grid">
+
+                {history.map((item, index) => (
+
+                  <div
+                    className="feature-card"
+                    key={item.id}
+                    style={{ textAlign: 'left' }}
+                  >
+
+                    <h3>Assessment #{item.id}</h3>
+
+                    <p>
+                      <strong>Career:</strong> {item.career}
+                    </p>
+
+                    <p>
+                      <strong>Date:</strong>{' '}
+                      {new Date(
+                        item.created_at.replace(' ', 'T') + 'Z'
+                      ).toLocaleString()}
+                    </p>
+
+                    <div
+                      className="dashboard-card"
+                      style={{ margin: '15px 0' }}
+                    >
+                      <p>Overall Skill Score</p>
+                      <h2>{item.overall_score}%</h2>
+                    </div>
+
+                    <h4>Individual Skill Scores</h4>
+
+                    {Object.entries(item.skills || {}).map(
+                      ([skill, score]) => (
+                        <div
+                          key={skill}
+                          style={{ marginTop: '12px' }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              gap: '10px'
+                            }}
+                          >
+                            <strong>{skill}</strong>
+                            <span>{score}%</span>
+                          </div>
+
+                          <div className="progress">
+                            <div style={{ width: `${score}%` }} />
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    <p style={{ marginTop: '15px' }}>
+                      <strong>Weak Skills:</strong>{' '}
+                      {item.weak_skills?.join(', ') || 'None'}
+                    </p>
+
+                    <p>
+                      <strong>Learning Time:</strong>{' '}
+                      {item.total_learning_hours} hours
+                    </p>
+
+                    <p>
+                      <strong>Estimated Days:</strong>{' '}
+                      {item.estimated_days}
+                    </p>
+
+                    <p style={{ marginTop: '10px', color: '#64748b' }}>
+                      {index === 0
+                        ? 'Latest Assessment'
+                        : `Previous Assessment #${item.id}`}
+                    </p>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            )}
+
+          </div>
+        )}
+
+      </section>
 
       {/* FEATURES */}
       <section className="features-section" id="features">
