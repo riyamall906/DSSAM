@@ -1,8 +1,9 @@
 node_modules/
 dist/
 .env
-.env.*
+.env.*jm
 !.env.example
 __pycache__/
 *.pyc
 ai_engine_backup/
+.venv/
