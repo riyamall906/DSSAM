@@ -15,6 +15,7 @@ def create_table():
     connection = get_connection()
     cursor = connection.cursor()
 
+    # Career assessments table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS assessments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,6 +29,34 @@ def create_table():
             recommendations TEXT,
             total_learning_hours REAL,
             estimated_days INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Coding assessments table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS coding_assessments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question_id INTEGER NOT NULL,
+            skill TEXT NOT NULL,
+            topic TEXT NOT NULL,
+            difficulty TEXT NOT NULL,
+            passed_tests INTEGER,
+            total_tests INTEGER,
+            score REAL,
+            verdict TEXT,
+            test_results TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Users table for registration and login
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -65,12 +94,13 @@ def save_assessment(data):
     connection.commit()
     connection.close()
 
-def get_assessment_history():
+
+def get_coding_assessment_history():
     connection = get_connection()
     cursor = connection.cursor()
 
     cursor.execute("""
-        SELECT * FROM assessments
+        SELECT * FROM coding_assessments
         ORDER BY created_at DESC
     """)
 
@@ -81,14 +111,50 @@ def get_assessment_history():
 
     for row in rows:
         item = dict(row)
-
-        item["skills"] = json.loads(item["skills"])
-        item["weak_skills"] = json.loads(item["weak_skills"])
-        item["intermediate_skills"] = json.loads(item["intermediate_skills"])
-        item["good_skills"] = json.loads(item["good_skills"])
-        item["roadmap_details"] = json.loads(item["roadmap_details"])
-        item["recommendations"] = json.loads(item["recommendations"])
-
+        item["test_results"] = json.loads(item["test_results"])
         history.append(item)
 
     return history
+
+
+def save_coding_assessment(data):
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        INSERT INTO coding_assessments (
+            question_id, skill, topic, difficulty,
+            passed_tests, total_tests, score,
+            verdict, test_results
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        data["question_id"],
+        data["skill"],
+        data["topic"],
+        data["difficulty"],
+        data["passed_tests"],
+        data["total_tests"],
+        data["score"],
+        data["verdict"],
+        json.dumps(data["test_results"])
+    ))
+
+    connection.commit()
+    connection.close()
+
+
+def get_coding_results_for_mastery():
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT skill, topic, difficulty, score
+        FROM coding_assessments
+        ORDER BY created_at ASC
+    """)
+
+    rows = cursor.fetchall()
+    connection.close()
+
+    return [dict(row) for row in rows]
